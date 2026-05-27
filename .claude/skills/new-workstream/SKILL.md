@@ -32,13 +32,20 @@ Target layout in the new cmux workspace:
    ```
    Setup (pnpm install, doppler, etc.) can take a minute or two — don't block on it.
 
-4. **Wait for the worktree directory to exist**, then read the screen to find the path. `git new-worktree` typically `cd`s into the worktree's app dir; the shell prompt will show the cwd. Convention (verify against the prompt, don't blindly assume):
+4. **Wait for the worktree directory to exist**, then read the screen to confirm `git new-worktree` finished creating it. Path convention (verify against the screen output — `git new-worktree` prints `Worktree ready: <path>` near the end):
    ```
-   ~/Projects/sibipro/worktrees/<project>/<branch>[/<app-subdir>]
+   ~/Projects/sibipro/worktrees/<project>/<branch>
    ```
+   For monorepos like biggie/rza, the app subdir under that path is usually `apps/<app-name>`.
    ```bash
-   sleep 3
+   sleep 5
    cmux read-screen --workspace workspace:N --lines 30
+   ```
+
+4b. **`cd` the setup tab into the new worktree** so it's a useful shell for follow-up commands. Do this even if setup.sh is still running — the `cd` will queue up and apply once the prompt returns. Use the worktree root (not the app subdir) so the tab can poke at workspace-level things:
+   ```bash
+   cmux send --workspace workspace:N "cd ~/Projects/sibipro/worktrees/<project>/<branch>"
+   cmux send-key --workspace workspace:N Enter
    ```
 
 5. **Create a new surface (tab) for Claude** in the same workspace and move it to position 0 so it becomes tab 1:
