@@ -20,5 +20,5 @@ Bosun is a meta-project: it holds CLAUDE.md files and skills used to manage *oth
 
 ## Conventions
 
-- Skills go in `.claude/skills/<skill-name>/` with a `SKILL.md` frontmatter block describing when to trigger.
+- Skills go in `.claude/skills/<skill-name>/` with a `SKILL.md` frontmatter block describing when to trigger. (The repo's `.gitignore` un-ignores `.claude/` — the user's global gitignore excludes it by default.)
 - CLAUDE.md files at the repo root apply to this project; nested CLAUDE.md files apply to their subtree.
