@@ -52,10 +52,10 @@ Target layout in the new cmux workspace:
    ```bash
    cmux send --workspace workspace:N --surface surface:M "cd <worktree-app-dir> && claude"
    cmux send-key --workspace workspace:N --surface surface:M Enter
-   sleep 5
+   sleep 6
    cmux read-screen --workspace workspace:N --surface surface:M --lines 40
    ```
-   Confirm you see the Claude banner before continuing.
+   **Confirm you see the Claude banner *and* the input prompt (`❯`) before continuing.** If you send a brief before Claude's input is ready, the text disappears into the shell or splash screen and the worker silently sits idle. When spawning many workers in parallel, verify each one individually — they boot at different speeds.
 
 7. **Brief the worker.** Send a self-contained task description — the worker has no memory of this conversation. Include:
    - What the problem is and why it matters (security report, bug, ticket context).
