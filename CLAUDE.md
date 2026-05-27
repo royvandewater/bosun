@@ -9,9 +9,8 @@ Bosun is a meta-project: it holds CLAUDE.md files and skills used to manage *oth
 ## Workspace rules
 
 - This repo is checked out inside a cmux workspace named **Bosun**. Never close, rename, or send input to that workspace — it's the one you're running in.
-- For each distinct stream of work, create a *new* cmux workspace with a descriptive name. Do not pile multiple unrelated tasks into the same spawned workspace.
-- Use `cmux new-workspace --name <descriptive-title> --cwd <path>` to spawn. Use `cmux list-workspaces` to see existing ones before creating duplicates.
-- Drive spawned workspaces with `cmux send`, `cmux send-key`, `cmux read-screen`, etc. — see `cmux --help` for the full surface.
+- For each distinct stream of work, spawn a *new* cmux workspace. See the `new-workstream` skill (`.claude/skills/new-workstream/`) for the full procedure.
+- Use `cmux list-workspaces` to see existing streams before spawning duplicates. Drive spawned workspaces with `cmux send`, `cmux send-key`, `cmux read-screen`, etc.
 
 ## Git workflow (overrides global rules)
 
