@@ -7,7 +7,7 @@ description: Kick off a new stream of work by spawning a fresh cmux workspace, r
 
 Bosun orchestrates other Claude instances. When the user hands you a new task targeting a different repo, do **not** do the work here — spawn a worker.
 
-`git new-worktree` only creates the worktree and runs the project's `setup.sh` (pnpm install, doppler setup, etc.). It does **not** launch Claude anymore — that's your job.
+`git new-worktree` only creates the worktree and runs the repo's `setup.sh` (pnpm install, doppler setup, etc.). It does **not** launch Claude anymore — that's your job.
 
 Target layout in the new cmux workspace:
 - **Tab 1**: the Claude instance (where you brief the worker).
@@ -15,28 +15,28 @@ Target layout in the new cmux workspace:
 
 ## Steps
 
-1. **Pick a branch name.** Format: `<project>/<kebab-case-description>`. No semantic prefixes (no `feat/`, `fix/`, etc.). Describe what the change does, not which ticket. Examples:
+1. **Pick a branch name.** Format: `<app>/<kebab-case-description>`. No semantic prefixes (no `feat/`, `fix/`, etc.). Describe what the change does, not which ticket. Examples:
    - `rza/redact-sms-in-aircall-webhook-error-logs`
    - `ordering/add-bulk-reassign-button`
 
 2. **Spawn the cmux workspace.** This gives you one default surface (tab) which will become the setup tab:
    ```bash
-   cmux new-workspace --name "<project>: <short title>" --focus false
+   cmux new-workspace --name "<app>: <short title>" --focus false
    ```
    Capture the returned ref (e.g. `workspace:17`).
 
 3. **Run `git new-worktree` in the default tab** to create the worktree and kick off setup:
    ```bash
-   cmux send --workspace workspace:N "git new-worktree <project> <project>/<branch>"
+   cmux send --workspace workspace:N "git new-worktree <repo> <app>/<branch>"
    cmux send-key --workspace workspace:N Enter
    ```
    Setup (pnpm install, doppler, etc.) can take a minute or two — don't block on it.
 
 4. **Wait for the worktree directory to exist**, then read the screen to confirm `git new-worktree` finished creating it. Path convention (verify against the screen output — `git new-worktree` prints `Worktree ready: <path>` near the end):
    ```
-   ~/Projects/sibipro/worktrees/<project>/<branch>
+   ~/Projects/sibipro/worktrees/<repo>/<branch>
    ```
-   For monorepos like biggie/rza, the app subdir under that path is usually `apps/<app-name>`.
+   For monorepos like biggie/rza, the app subdir under that path is usually `apps/<app>`.
    ```bash
    sleep 5
    cmux read-screen --workspace workspace:N --lines 30
@@ -44,7 +44,7 @@ Target layout in the new cmux workspace:
 
 4b. **`cd` the setup tab into the new worktree** so it's a useful shell for follow-up commands. Do this even if setup.sh is still running — the `cd` will queue up and apply once the prompt returns. Use the worktree root (not the app subdir) so the tab can poke at workspace-level things:
    ```bash
-   cmux send --workspace workspace:N "cd ~/Projects/sibipro/worktrees/<project>/<branch>"
+   cmux send --workspace workspace:N "cd ~/Projects/sibipro/worktrees/<repo>/<branch>"
    cmux send-key --workspace workspace:N Enter
    ```
 
