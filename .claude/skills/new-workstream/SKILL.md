@@ -15,24 +15,30 @@ Target layout in the new cmux workspace:
 
 ## Steps
 
-1. **Pick a branch name.** Format: `<app>/<kebab-case-description>`. No semantic prefixes (no `feat/`, `fix/`, etc.). Describe what the change does, not which ticket. Examples:
+1. **If the task comes from a Linear ticket, call dibs first:**
+   ```bash
+   linear dibs <number>
+   ```
+   This assigns the ticket to you so the team knows it's in flight.
+
+3. **Pick a branch name.** Format: `<app>/<kebab-case-description>`. No semantic prefixes (no `feat/`, `fix/`, etc.). Describe what the change does, not which ticket. Examples:
    - `rza/redact-sms-in-aircall-webhook-error-logs`
    - `ordering/add-bulk-reassign-button`
 
-2. **Spawn the cmux workspace.** This gives you one default surface (tab) which will become the setup tab:
+4. **Spawn the cmux workspace.** This gives you one default surface (tab) which will become the setup tab:
    ```bash
    cmux new-workspace --name "<app>: <short title>" --focus false
    ```
    Capture the returned ref (e.g. `workspace:17`).
 
-3. **Run `git new-worktree` in the default tab** to create the worktree and kick off setup:
+5. **Run `git new-worktree` in the default tab** to create the worktree and kick off setup:
    ```bash
    cmux send --workspace workspace:N "git new-worktree <repo> <app>/<branch>"
    cmux send-key --workspace workspace:N Enter
    ```
    Setup (pnpm install, doppler, etc.) can take a minute or two — don't block on it.
 
-4. **Wait for the worktree directory to exist**, then read the screen to confirm `git new-worktree` finished creating it. Path convention (verify against the screen output — `git new-worktree` prints `Worktree ready: <path>` near the end):
+6. **Wait for the worktree directory to exist**, then read the screen to confirm `git new-worktree` finished creating it. Path convention (verify against the screen output — `git new-worktree` prints `Worktree ready: <path>` near the end):
    ```
    ~/Projects/sibipro/worktrees/<repo>/<branch>
    ```
@@ -42,20 +48,20 @@ Target layout in the new cmux workspace:
    cmux read-screen --workspace workspace:N --lines 30
    ```
 
-4b. **`cd` the setup tab into the new worktree** so it's a useful shell for follow-up commands. Do this even if setup.sh is still running — the `cd` will queue up and apply once the prompt returns. Use the worktree root (not the app subdir) so the tab can poke at workspace-level things:
+6b. **`cd` the setup tab into the new worktree** so it's a useful shell for follow-up commands. Do this even if setup.sh is still running — the `cd` will queue up and apply once the prompt returns. Use the worktree root (not the app subdir) so the tab can poke at workspace-level things:
    ```bash
    cmux send --workspace workspace:N "cd ~/Projects/sibipro/worktrees/<repo>/<branch>"
    cmux send-key --workspace workspace:N Enter
    ```
 
-5. **Create a new surface (tab) for Claude** in the same workspace and move it to position 0 so it becomes tab 1:
+7. **Create a new surface (tab) for Claude** in the same workspace and move it to position 0 so it becomes tab 1:
    ```bash
    cmux new-surface --type terminal --workspace workspace:N --focus false
    # Note the returned surface ref, e.g. surface:52
    cmux reorder-surface --surface surface:M --index 0 --workspace workspace:N
    ```
 
-6. **Launch Claude in the new tab 1.** `cd` to the worktree app dir (the path you found in step 4) and run `claude`:
+8. **Launch Claude in the new tab 1.** `cd` to the worktree app dir (the path you found in step 6) and run `claude`:
    ```bash
    cmux send --workspace workspace:N --surface surface:M "cd <worktree-app-dir> && claude"
    cmux send-key --workspace workspace:N --surface surface:M Enter
@@ -64,7 +70,7 @@ Target layout in the new cmux workspace:
    ```
    **Confirm you see the Claude banner *and* the input prompt (`❯`) before continuing.** If you send a brief before Claude's input is ready, the text disappears into the shell or splash screen and the worker silently sits idle. When spawning many workers in parallel, verify each one individually — they boot at different speeds.
 
-7. **Brief the worker.** Send a self-contained task description — the worker has no memory of this conversation. Include:
+9. **Brief the worker.** Send a self-contained task description — the worker has no memory of this conversation. Include:
    - What the problem is and why it matters (security report, bug, ticket context).
    - Constraints from the user's global CLAUDE.md that apply (TDD, commit cadence, PR title format like `[HED-1234]`, no rebase/amend, branch already exists).
    - When to commit and open a draft PR (per global rules: after the first commit).
@@ -74,7 +80,7 @@ Target layout in the new cmux workspace:
    cmux send-key --workspace workspace:N --surface surface:M Enter
    ```
 
-8. **Report back to the user** with the workspace ref and a one-line summary of what was dispatched.
+10. **Report back to the user** with the workspace ref and a one-line summary of what was dispatched.
 
 ## What not to do
 
