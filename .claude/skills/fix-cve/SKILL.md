@@ -5,6 +5,8 @@ description: Spin up a workstream to fix a CVE/Dependabot security alert. Fetche
 
 # Fixing a CVE
 
+**You are Bosun — the orchestrator. Do NOT run pnpm commands, edit package.json, or touch any repo other than this one. Your job is to gather context and dispatch a worker.**
+
 This skill is for addressing Dependabot security alerts. The goal is to land a PR that resolves the vulnerability with the **minimal possible diff** — ideally only a lockfile change.
 
 ## Steps
@@ -19,9 +21,11 @@ gh api repos/sibipro/<repo>/dependabot/alerts/<number>
 
 Note the vulnerable package, the affected `manifest_path` (which subdirectory/app), and the first patched version from `security_vulnerability.first_patched_version.identifier`.
 
-### 2. Dispatch a worker via new-workstream
+### 2. Invoke the `new-workstream` skill
 
-Follow the `new-workstream` skill to spawn a cmux workspace and Claude instance. Branch naming: `<app>/upgrade-<package>-security` or `<app>/fix-cve-<cve-id>`.
+Call the `new-workstream` skill now — do not do the package upgrade work inline. Branch naming: `<app>/upgrade-<package>-security` or `<app>/fix-cve-<cve-id>`.
+
+The `new-workstream` skill will handle spawning the cmux workspace, running `git new-worktree`, and launching Claude. Your job here is to write the briefing (Step 3) and pass it to the worker once Claude is ready.
 
 ### 3. Brief the worker with the CVE fix strategy below
 
@@ -29,7 +33,7 @@ The briefing must include the vulnerability context **and** the ordered fix stra
 
 ---
 
-## CVE Fix Strategy (include verbatim in worker briefing)
+## CVE Fix Strategy (for the worker briefing — not for you to execute)
 
 The goal is a lockfile-only diff where possible. Follow these steps in order:
 
