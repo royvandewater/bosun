@@ -54,19 +54,19 @@ The background agent should execute these steps:
    cmux send-key --workspace workspace:N Enter
    ```
 
-3. **CD the setup tab** (queue it now, it applies once the prompt returns):
+3. **CD the setup tab** into the app directory if the task targets a specific app, otherwise the worktree root for repo-wide tasks:
    ```bash
-   cmux send --workspace workspace:N "cd ~/Projects/sibipro/worktrees/<repo>/<branch>"
+   cmux send --workspace workspace:N "cd <app-dir-or-worktree-root>"
    cmux send-key --workspace workspace:N Enter
    ```
+   For monorepos like rza/biggie the app dir is `~/Projects/sibipro/worktrees/<repo>/<branch>/apps/<app>`.
 
 4. **Wait for setup to finish.** Poll with `cmux read-screen` until `Worktree ready:` appears:
    ```bash
    sleep 5
    cmux read-screen --workspace workspace:N --lines 30
    ```
-   Repeat if still installing. Path convention: `~/Projects/sibipro/worktrees/<repo>/<branch>`.
-   For monorepos like biggie/rza, the app subdir is usually `apps/<app>`.
+   Repeat if still installing.
 
 5. **Create the Claude surface** and move it to tab 1:
    ```bash
@@ -74,9 +74,9 @@ The background agent should execute these steps:
    cmux reorder-surface --surface surface:M --index 0 --workspace workspace:N
    ```
 
-6. **Launch Claude** in tab 1 (`cd` to the app dir, not just the worktree root):
+6. **Launch Claude** in tab 1, `cd`-ing into the app directory when the task targets a specific app (same rule as step 3 — use the worktree root only for repo-wide tasks):
    ```bash
-   cmux send --workspace workspace:N --surface surface:M "cd <worktree-app-dir> && claude"
+   cmux send --workspace workspace:N --surface surface:M "cd <app-dir-or-worktree-root> && claude"
    cmux send-key --workspace workspace:N --surface surface:M Enter
    sleep 6
    cmux read-screen --workspace workspace:N --surface surface:M --lines 40
