@@ -15,78 +15,96 @@ Target layout in the new cmux workspace:
 
 ## Steps
 
+### Phase 1 — Do inline (fast, needs your judgment)
+
 1. **If the task comes from a Linear ticket, call dibs first:**
    ```bash
    linear dibs <number>
    ```
-   This assigns the ticket to you so the team knows it's in flight.
 
-3. **Pick a branch name.** Format: `<app>/<kebab-case-description>`. No semantic prefixes (no `feat/`, `fix/`, etc.). Describe what the change does, not which ticket. Examples:
-   - `rza/redact-sms-in-aircall-webhook-error-logs`
-   - `ordering/add-bulk-reassign-button`
+2. **Pick a branch name.** Format: `<app>/<kebab-case-description>`. No semantic prefixes (no `feat/`, `fix/`, etc.).
 
-4. **Spawn the cmux workspace.** This gives you one default surface (tab) which will become the setup tab:
+3. **Write the worker briefing.** Compose the full briefing text you'll send to Claude (see "Brief the worker" below). You need this ready before spawning.
+
+### Phase 2 — Run in background
+
+Once you have the branch name and briefing ready, **spawn a background agent** to handle all the cmux work. Use the Agent tool with `run_in_background: true`. Pass it a self-contained prompt that includes:
+
+- The repo name, branch name, workspace display name, and worktree path
+- The full briefing text to send to the worker Claude
+- The complete procedure below
+
+Tell the user: **"Workstream spinning up in the background — I'll notify you when it's ready."** Then stop — don't run any cmux commands yourself.
+
+---
+
+## Procedure for the background agent
+
+The background agent should execute these steps:
+
+1. **Spawn the cmux workspace** (this creates the default setup tab):
    ```bash
    cmux new-workspace --name "<app>: <short title>" --focus false
    ```
    Capture the returned ref (e.g. `workspace:17`).
 
-5. **Run `git new-worktree` in the default tab** to create the worktree and kick off setup:
+2. **Run `git new-worktree`** in the default tab:
    ```bash
-   cmux send --workspace workspace:N "git new-worktree <repo> <app>/<branch>"
+   cmux send --workspace workspace:N "git new-worktree <repo> <branch>"
    cmux send-key --workspace workspace:N Enter
    ```
-   Setup (pnpm install, doppler, etc.) can take a minute or two — don't block on it.
 
-6. **Wait for the worktree directory to exist**, then read the screen to confirm `git new-worktree` finished creating it. Path convention (verify against the screen output — `git new-worktree` prints `Worktree ready: <path>` near the end):
-   ```
-   ~/Projects/sibipro/worktrees/<repo>/<branch>
-   ```
-   For monorepos like biggie/rza, the app subdir under that path is usually `apps/<app>`.
-   ```bash
-   sleep 5
-   cmux read-screen --workspace workspace:N --lines 30
-   ```
-
-6b. **`cd` the setup tab into the new worktree** so it's a useful shell for follow-up commands. Do this even if setup.sh is still running — the `cd` will queue up and apply once the prompt returns. Use the worktree root (not the app subdir) so the tab can poke at workspace-level things:
+3. **CD the setup tab** (queue it now, it applies once the prompt returns):
    ```bash
    cmux send --workspace workspace:N "cd ~/Projects/sibipro/worktrees/<repo>/<branch>"
    cmux send-key --workspace workspace:N Enter
    ```
 
-7. **Create a new surface (tab) for Claude** in the same workspace and move it to position 0 so it becomes tab 1:
+4. **Wait for setup to finish.** Poll with `cmux read-screen` until `Worktree ready:` appears:
+   ```bash
+   sleep 5
+   cmux read-screen --workspace workspace:N --lines 30
+   ```
+   Repeat if still installing. Path convention: `~/Projects/sibipro/worktrees/<repo>/<branch>`.
+   For monorepos like biggie/rza, the app subdir is usually `apps/<app>`.
+
+5. **Create the Claude surface** and move it to tab 1:
    ```bash
    cmux new-surface --type terminal --workspace workspace:N --focus false
-   # Note the returned surface ref, e.g. surface:52
    cmux reorder-surface --surface surface:M --index 0 --workspace workspace:N
    ```
 
-8. **Launch Claude in the new tab 1.** `cd` to the worktree app dir (the path you found in step 6) and run `claude`:
+6. **Launch Claude** in tab 1 (`cd` to the app dir, not just the worktree root):
    ```bash
    cmux send --workspace workspace:N --surface surface:M "cd <worktree-app-dir> && claude"
    cmux send-key --workspace workspace:N --surface surface:M Enter
    sleep 6
    cmux read-screen --workspace workspace:N --surface surface:M --lines 40
    ```
-   **Confirm you see the Claude banner *and* the input prompt (`❯`) before continuing.** If you send a brief before Claude's input is ready, the text disappears into the shell or splash screen and the worker silently sits idle. When spawning many workers in parallel, verify each one individually — they boot at different speeds.
+   **Confirm you see the Claude banner AND the `❯` prompt before continuing.** If you send the briefing before Claude's input is ready, the text is swallowed silently.
 
-9. **Brief the worker.** Send a self-contained task description — the worker has no memory of this conversation. Include:
-   - What the problem is and why it matters (security report, bug, ticket context).
-   - Constraints from the user's global CLAUDE.md that apply (TDD, commit cadence, PR title format like `[HED-1234]`, no rebase/amend, branch already exists).
-   - When to commit and open a draft PR (per global rules: after the first commit).
-
+7. **Send the briefing:**
    ```bash
    cmux send --workspace workspace:N --surface surface:M "<full briefing text>"
    cmux send-key --workspace workspace:N --surface surface:M Enter
    ```
 
-10. **Report back to the user** with the workspace ref and a one-line summary of what was dispatched.
+8. **Report back** with the workspace ref and a one-line summary of what was dispatched.
+
+---
+
+## Brief the worker
+
+The briefing must be self-contained — the worker has no memory of this conversation. Include:
+- What the problem is and why it matters.
+- Constraints from the user's global CLAUDE.md: TDD, commit immediately after every change, open a draft PR after the first commit, no rebase/amend, use `git switch`/`git restore` not `git checkout`, PR title format `[HED-1234]` if there's a ticket.
+- The branch already exists (don't create it).
 
 ## What not to do
 
-- **Never** touch the workspace named "Bosun" — that's where you (the orchestrator) are running.
-- Don't do the actual work in the Bosun repo. If the task is "fix bug in RZA," your job is to dispatch a worker; the worker does the fix.
-- Don't wait for `setup.sh` to finish before launching Claude — they can run in parallel. Claude will block on `pnpm` commands itself if it needs them before setup completes.
+- **Never** touch the workspace named "Bosun".
+- Don't do the actual work inline. Your job is to dispatch; the worker does the fix.
+- Don't run cmux commands yourself — delegate all of Phase 2 to the background agent.
 - Don't skip the briefing. A worker spawned without a clear task will sit idle.
 
 ## Checking in on workers

@@ -59,32 +59,42 @@ Before asking, run `git -C <worktree-path> log @{u}..HEAD --oneline 2>/dev/null`
 
 Once you've decided to proceed:
 
-1. **Halt Claude in tab 1.** Send `/exit` followed by Enter to the Claude surface — that's the clean shutdown. Find tab 1's surface via `cmux list-pane-surfaces`:
+### Resolve surfaces inline (fast)
+
+Run `cmux list-pane-surfaces --workspace workspace:N` to identify:
+- The **Claude surface** (tab 1) — look for the one with a `✳` or whose title matches the task.
+- The **setup surface** (tab 2) — the terminal showing the worktree path.
+
+### Then background the destructive work
+
+**Spawn a background agent** (Agent tool, `run_in_background: true`) with the workspace ref, both surface refs, and these steps. Tell the user: **"Cleaning up in the background — I'll notify you when it's done."**
+
+The background agent should:
+
+1. **Halt Claude in tab 1:**
    ```bash
-   cmux send --workspace workspace:N --surface surface:M "/exit"
-   cmux send-key --workspace workspace:N --surface surface:M Enter
+   cmux send --workspace workspace:N --surface surface:CLAUDE "/exit"
+   cmux send-key --workspace workspace:N --surface surface:CLAUDE Enter
    sleep 2
    ```
 
-2. **Delete the worktree** from the setup tab (tab 2 — it's already cd'd into the worktree per the new-workstream skill). `git delete-worktree` removes the worktree AND deletes the local branch:
+2. **Delete the worktree** from the setup tab (`git delete-worktree` removes the worktree AND the local branch):
    ```bash
-   cmux send --workspace workspace:N --surface <setup-surface-ref> "git delete-worktree"
-   cmux send-key --workspace workspace:N --surface <setup-surface-ref> Enter
-   sleep 3
-   cmux read-screen --workspace workspace:N --surface <setup-surface-ref> --lines 20
+   cmux send --workspace workspace:N --surface surface:SETUP "git delete-worktree"
+   cmux send-key --workspace workspace:N --surface surface:SETUP Enter
    ```
-   Verify it printed "Worktree removed" and "Deleting branch". If it refused (e.g. uncommitted changes), surface the error to the user — don't blindly retry with `--force`.
+   Poll `cmux read-screen` until it prints "Worktree removed" and "Deleting branch". RZA is large — allow up to ~60s. If it refused (e.g. uncommitted changes), surface the error; don't retry with `--force`.
 
-3. **Close the cmux workspace.** This terminates all remaining tabs in one shot:
+3. **Close the workspace:**
    ```bash
    cmux close-workspace --workspace workspace:N
    ```
 
-4. **Report back.** One line: "Cleaned up workspace:N — worktree removed, branch deleted, PR #X merged" (or whatever applied).
+4. **Report back:** "Cleaned up workspace:N — worktree removed, branch deleted, PR #X merged" (or whatever applied).
 
 ## What not to do
 
 - Don't skip the PR check. The user may genuinely have lost track of whether something shipped.
-- Don't `git delete-worktree --force` unless the user explicitly approves it — uncommitted changes are usually a signal that something was left undone.
-- Don't `cmux close-workspace` before deleting the worktree — the setup tab is where `git delete-worktree` runs, and you can't run it once the workspace is gone (the script must be run from inside the worktree).
+- Don't `git delete-worktree --force` unless the user explicitly approves it.
+- Don't `cmux close-workspace` before deleting the worktree — once the workspace is gone you can't run commands in it.
 - Never close the workspace named "Bosun".
