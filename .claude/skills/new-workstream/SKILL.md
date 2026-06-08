@@ -109,7 +109,7 @@ The briefing must be self-contained — the worker has no memory of this convers
 
 ## Checking in on workers
 
-- `cmux list-workspaces` — see all active streams.
+- `cmux workspace list` — see all active streams.
 - `cmux list-pane-surfaces --workspace workspace:N` — see the tabs within a worker's workspace.
 - `cmux read-screen --workspace workspace:N --surface surface:M --lines 60` — peek at what a worker is doing.
 - `cmux send --workspace workspace:N --surface surface:M "<followup>"` + `send-key Enter` — answer questions or redirect.

@@ -15,7 +15,7 @@ The user will name a workspace by ref (`workspace:17`), by cmux name ("the hench
 - The **branch name** (`git -C <worktree-path> branch --show-current`).
 
 ```bash
-cmux list-workspaces                                  # find the workspace
+cmux workspace list                                   # find the workspace
 cmux list-pane-surfaces --workspace workspace:N       # see the tabs
 git -C <worktree-path> branch --show-current          # confirm branch
 ```
