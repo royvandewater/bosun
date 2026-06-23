@@ -7,47 +7,49 @@ description: Scan all active cmux workstreams, identify any whose PR has been me
 
 Scan every non-Bosun workspace, detect merged PRs, and tear down the ones that are done.
 
-## Phase 1 — Discover workspaces (inline)
+## Phase 1 — Single-pass discovery (inline)
+
+One command gets everything:
 
 ```bash
-cmux workspace list
+cmux tree --all --json
 ```
 
-Note every workspace ref and name, skipping "Bosun" and any workspace the user has explicitly asked you to leave alone (e.g. an open feature stream the user is monitoring).
+This returns all workspaces and their surfaces in one shot, including a `url` field on browser surfaces. Use it to build a map of `workspace_ref → surfaces[]`.
 
-## Phase 2 — Detect merged PRs (inline, parallel where possible)
+Skip the workspace named "Bosun" and any the user has explicitly asked to leave alone.
 
-For each workspace, find its PR using **one of two methods**:
+## Phase 2 — Detect merged PRs (inline)
 
-### Method A — Browser surface (preferred)
+For each non-Bosun workspace, find its PR:
 
-```bash
-cmux list-pane-surfaces --workspace workspace:N --json
-```
+### Method A — Browser surface URL (preferred)
 
-Look for a surface with `"type": "browser"` whose `title` matches the pattern:
+Look for surfaces with `"type": "browser"` and a non-null `url`. GitHub PR URLs look like:
 
 ```
-... Pull Request #<number> · <owner>/<repo>
+https://github.com/<owner>/<repo>/pull/<number>
 ```
 
-Parse `owner`, `repo`, and `number` from the title, then:
+Parse `owner`, `repo`, and `number` directly from the URL, then:
 
 ```bash
 gh -R <owner>/<repo> pr view <number> --json state,mergedAt,url
 ```
 
-### Method B — Branch from worktree (fallback)
+### Method B — Branch from worktree (always run for terminal-only workspaces)
 
-**Always run this for terminal-only workspaces** — do not skip it just because the terminal title doesn't look like a PR. The worker may have finished and pushed without opening a browser tab.
+**Do not skip this step** just because the terminal title doesn't look like a PR — the worker may have finished without opening a browser tab.
 
-If no browser surface exists, get the workspace's `current_directory` from `cmux workspace list --json`, then:
+Get the workspace's `current_directory` from the tree output, then:
 
 ```bash
 git -C <current_directory> branch --show-current
 ```
 
-Then look up the PR by head branch. You'll need the repo — infer it from the worktree path (e.g. `~/Projects/sibipro/worktrees/<repo>/...` → `sibipro/<repo>`, or `~/Projects/royvandewater/worktrees/<repo>/...` → `royvandewater/<repo>`):
+Infer the repo from the worktree path:
+- `~/Projects/sibipro/worktrees/<repo>/...` → `sibipro/<repo>`
+- `~/Projects/royvandewater/worktrees/<repo>/...` → `royvandewater/<repo>`
 
 ```bash
 gh -R <owner>/<repo> pr list --state all --head <branch> --json number,state,mergedAt,url
@@ -61,30 +63,24 @@ If neither method surfaces a PR, note it and skip — don't clean up without con
 
 For each workspace where the PR state is `MERGED`:
 
-**Spawn a background agent** (one per workspace) with the workspace ref, both surface refs, and these steps. Tell the user which workspaces you're cleaning before dispatching.
+**Spawn a background agent** (one per workspace) with the workspace ref, surface refs from the tree output, and these steps. Tell the user which workspaces you're cleaning before dispatching.
 
 Each cleanup agent should:
 
-1. List surfaces to identify Claude surface and setup surface:
-   ```bash
-   cmux list-pane-surfaces --workspace workspace:N
-   ```
+1. Identify the Claude terminal surface (look for `✳` or terminal type) from the already-known surface list. If unsure, run `cmux list-pane-surfaces --workspace workspace:N`.
 
-2. Halt Claude on the terminal surface (look for `✳` or a terminal type — **not** the browser surface):
+2. Halt Claude on the terminal surface (**not** the browser surface):
    ```bash
    cmux send --workspace workspace:N --surface surface:CLAUDE "/exit"
    cmux send-key --workspace workspace:N --surface surface:CLAUDE Enter
    sleep 2
    ```
+   If there is no terminal surface (browser-only workspace), skip this step.
 
-3. Delete the worktree. If there's a setup terminal surface, use it:
+3. Delete the worktree. Use `current_directory` from the tree as the worktree path:
    ```bash
-   cmux send --workspace workspace:N --surface surface:SETUP "git delete-worktree"
-   cmux send-key --workspace workspace:N --surface surface:SETUP Enter
-   ```
-   Poll `cmux read-screen` until "Worktree removed" appears (up to 60s). If no setup surface exists, fall back to removing the directory directly:
-   ```bash
-   rm -rf <worktree_path>
+   rm -rf <current_directory>
+   git -C <parent-repo-path> worktree prune 2>/dev/null || true
    ```
 
 4. Close the workspace:
