@@ -39,6 +39,8 @@ gh -R <owner>/<repo> pr view <number> --json state,mergedAt,url
 
 ### Method B — Branch from worktree (fallback)
 
+**Always run this for terminal-only workspaces** — do not skip it just because the terminal title doesn't look like a PR. The worker may have finished and pushed without opening a browser tab.
+
 If no browser surface exists, get the workspace's `current_directory` from `cmux workspace list --json`, then:
 
 ```bash
