@@ -1,6 +1,6 @@
 ---
 name: new-workstream
-description: Kick off a new stream of work by spawning a fresh cmux workspace, running git new-worktree for setup in tab 2, and launching a Claude instance in tab 1 briefed on the task. Use whenever the user describes a new piece of work to be done in one of the other repos (RZA, Biggie, etc.) — Bosun's job is to orchestrate, not to do that work inline.
+description: Kick off a new stream of work by spawning a fresh cmux workspace, running git new-worktree for setup, and launching a Claude instance in tab 1 briefed on the task. Use whenever the user describes a new piece of work to be done in one of the other repos (RZA, Biggie, etc.) — Bosun's job is to orchestrate, not to do that work inline.
 ---
 
 # Kicking off a new workstream
@@ -10,8 +10,7 @@ Bosun orchestrates other Claude instances. When the user hands you a new task ta
 `git new-worktree` only creates the worktree and runs the repo's `setup.sh` (pnpm install, doppler setup, etc.). It does **not** launch Claude anymore — that's your job.
 
 Target layout in the new cmux workspace:
-- **Tab 1**: the Claude instance (where you brief the worker).
-- **Tab 2**: the setup terminal (where `git new-worktree` ran and stays for follow-up shell work).
+- **Tab 1**: the Claude instance (where you brief the worker). This is the only tab.
 
 ## Steps
 
@@ -48,6 +47,11 @@ The background agent should execute these steps:
    ```
    Capture the returned ref (e.g. `workspace:17`).
 
+   **CVE fix streams only:** set the workspace color to Amber right after creation:
+   ```bash
+   cmux workspace-action set-color Amber --workspace workspace:N
+   ```
+
 2. **Run `git new-worktree`** in the default tab:
    ```bash
    cmux send --workspace workspace:N "git new-worktree <repo> <branch>"
@@ -83,6 +87,20 @@ The background agent should execute these steps:
    ```
    **Confirm you see the Claude banner AND the `❯` prompt before continuing.** If you send the briefing before Claude's input is ready, the text is swallowed silently.
 
+6b. **Enable caveman mode** — send `/caveman full` so the worker responds tersely:
+   ```bash
+   cmux send --workspace workspace:N --surface surface:M "/caveman full"
+   cmux send-key --workspace workspace:N --surface surface:M Enter
+   sleep 3
+   cmux read-screen --workspace workspace:N --surface surface:M --lines 10
+   ```
+   Wait for Claude to acknowledge before sending the briefing.
+
+6a. **Close the setup surface** (the original tab from step 1 — now that Claude is running, it's no longer needed):
+   ```bash
+   cmux close-surface --surface <original-surface-ref> --workspace workspace:N
+   ```
+
 7. **Send the briefing:**
    ```bash
    cmux send --workspace workspace:N --surface surface:M "<full briefing text>"
@@ -97,8 +115,9 @@ The background agent should execute these steps:
 
 The briefing must be self-contained — the worker has no memory of this conversation. Include:
 - What the problem is and why it matters.
-- Constraints from the user's global CLAUDE.md: TDD, commit immediately after every change, open a draft PR after the first commit, no rebase/amend, use `git switch`/`git restore` not `git checkout`, PR title format `[HED-1234]` if there's a ticket.
 - The branch already exists (don't create it).
+
+Do **not** repeat constraints that are already in the user's global CLAUDE.md (TDD, commit cadence, PR cadence, no rebase/amend, `git switch`/`git restore`, PR title format, etc.) — the worker's Claude instance loads that file automatically and will follow those rules without being told.
 
 ## What not to do
 
