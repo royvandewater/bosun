@@ -21,7 +21,10 @@ Target layout in the new cmux workspace:
    linear dibs <number>
    ```
 
-2. **Pick a branch name.** Format: `<app>/<kebab-case-description>`. No semantic prefixes (no `feat/`, `fix/`, etc.).
+2. **Pick a branch name.**
+   - **Monorepo (rza, biggie, etc.):** prefix with the **app** being changed — `<app>/<kebab-case-description>` (e.g. `ordering/add-metadata`).
+   - **Single-package repo (trim-the-sails, git-tools, stack-cleanup, etc.):** use a bare `<kebab-case-description>` — **do not** prefix with the repo name. The branch already lives in that repo; `trim-the-sails/run-in-parallel` is redundant, just use `run-in-parallel`.
+   - No semantic prefixes (no `feat/`, `fix/`, etc.).
 
 3. **Write the worker briefing.** Compose the full briefing text you'll send to Claude (see "Brief the worker" below). You need this ready before spawning.
 
