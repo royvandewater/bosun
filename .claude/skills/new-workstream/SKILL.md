@@ -107,7 +107,7 @@ The background agent should execute these steps:
    sleep 6
    cmux read-screen --workspace workspace:N --surface surface:M --lines 40
    ```
-   **CVE fix streams:** launch with Haiku 5.5 instead — use `claude --model claude-haiku-5-5` in place of `claude` in the command above. All other streams use the default model.
+   **CVE fix streams:** launch with Opus 5.5 instead — use `claude --model claude-opus-5-5` in place of `claude` in the command above. All other streams use the default model.
 
    **Confirm you see the Claude banner AND the `❯` prompt before continuing.** If you send the briefing before Claude's input is ready, the text is swallowed silently.
 
