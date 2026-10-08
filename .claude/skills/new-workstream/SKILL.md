@@ -30,7 +30,9 @@ Target layout in the new cmux workspace:
 
 ### Phase 2 — Run in background
 
-Once you have the branch name and briefing ready, **spawn a background agent** to handle all the cmux work. Use the Agent tool with `run_in_background: true`. Pass it a self-contained prompt that includes:
+Once you have the branch name and briefing ready, **spawn a background agent** to handle all the cmux work. Use the Agent tool with `run_in_background: true`. **Do not pass `isolation: "worktree"`** — a worktree-isolated agent gets hard-blocked by the sandbox on any `cmux send` command containing `git` text (it can't verify a relayed git command stays scoped to its own worktree), which kills `git new-worktree` and any later `cd`-into-worktree steps. If a background agent reports hitting this block anyway, finish its remaining steps yourself from the main session rather than retrying through it — and if a blocked `cmux send` left garbled leftover text in the target terminal's input line, clear it with `cmux send-key --workspace <ref> ctrl+c` before resending.
+
+Pass the agent a self-contained prompt that includes:
 
 - The repo name, branch name, workspace display name, and worktree path
 - The full briefing text to send to the worker Claude
@@ -50,16 +52,33 @@ The background agent should execute these steps:
    ```
    Capture the returned ref (e.g. `workspace:17`).
 
-   **CVE fix streams only:** set the workspace color to Amber right after creation:
+   **Set the workspace color right after creation** (always — not just CVE fixes):
    ```bash
-   cmux workspace-action set-color Amber --workspace workspace:N
+   cmux workspace-action set-color <Color> --workspace workspace:N
    ```
+   - **CVE fix streams:** always `Amber`.
+   - **Everything else:** pick a color by vibes from `Red, Crimson, Orange, Olive, Green, Teal, Aqua, Blue, Navy, Indigo, Purple, Magenta, Rose, Brown, Charcoal` (Amber reserved for CVE fixes). Base the pick on the feel of the task — e.g. a bugfix/investigation might feel Red or Crimson, a new feature might feel Green or Blue, docs/cleanup might feel Charcoal or Olive.
+   - **Related streams share a color:** if this workstream is part of the same effort as another currently-active one (same ticket broken into parts, same repo's related follow-up work, etc.), reuse that other stream's color instead of picking a new one — check `cmux workspace list` for existing workspace names/colors first when in doubt.
+
+   **CVE fix streams also join a shared workspace group** so they collapse together in the sidebar:
+   ```bash
+   cmux workspace-group list --json
+   ```
+   - If a group named "CVE fixes" already exists, add the new workspace to it:
+     ```bash
+     cmux workspace-group add --group <group-ref> --workspace workspace:N
+     ```
+   - If no such group exists yet, create one seeded with just this workspace:
+     ```bash
+     cmux workspace-group create --name "CVE fixes" --from workspace:N
+     ```
 
 2. **Run `git new-worktree`** in the default tab:
    ```bash
    cmux send --workspace workspace:N "git new-worktree <repo> <branch>"
    cmux send-key --workspace workspace:N Enter
    ```
+   `git new-worktree <project> <branch>` auto-detects whether `<branch>` already exists (locally, on `origin`, or neither) and does the right thing — checks out the existing branch (e.g. to resume/fix up an already-open PR) or creates a fresh one off the remote default branch. You never need to pass extra flags to target an existing PR's branch — just pass its branch name.
 
 3. **CD the setup tab** into the app directory if the task targets a specific app, otherwise the worktree root for repo-wide tasks:
    ```bash
@@ -88,16 +107,13 @@ The background agent should execute these steps:
    sleep 6
    cmux read-screen --workspace workspace:N --surface surface:M --lines 40
    ```
+   **CVE fix streams:** launch with Haiku 5.5 instead — use `claude --model claude-haiku-5-5` in place of `claude` in the command above. All other streams use the default model.
+
    **Confirm you see the Claude banner AND the `❯` prompt before continuing.** If you send the briefing before Claude's input is ready, the text is swallowed silently.
 
-6b. **Enable caveman mode** — send `/caveman full` so the worker responds tersely:
-   ```bash
-   cmux send --workspace workspace:N --surface surface:M "/caveman full"
-   cmux send-key --workspace workspace:N --surface surface:M Enter
-   sleep 3
-   cmux read-screen --workspace workspace:N --surface surface:M --lines 10
-   ```
-   Wait for Claude to acknowledge before sending the briefing.
+   **If Claude prompts to enable/connect any MCP servers on startup, always decline** — `cmux send-key --workspace workspace:N --surface surface:M escape`. Never approve or enable an offered MCP server for a worker instance.
+
+   **If Claude shows a "trust this folder" prompt, select "Yes, I trust this folder"** (it's the second option — send `down` then `enter`).
 
 6a. **Close the setup surface** (the original tab from step 1 — now that Claude is running, it's no longer needed):
    ```bash
