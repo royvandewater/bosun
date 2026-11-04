@@ -73,6 +73,8 @@ The background agent should execute these steps:
      cmux workspace-group create --name "CVE fixes" --from workspace:N
      ```
 
+   **All other streams: join an existing group if one fits.** Run `cmux workspace-group list --json` (groups get created over time, so re-check every time — don't assume none exist). If a group's name matches the stream's effort (e.g. an "API Gateway" group for a `combined-openapi` / gateway task), add the new workspace to it with `cmux workspace-group add`. Only add when the fit is clear; don't create new groups for non-CVE streams, and don't force a stream into an unrelated group.
+
 2. **Run `git new-worktree`** in the default tab:
    ```bash
    cmux send --workspace workspace:N "git new-worktree <repo> <branch>"
