@@ -68,10 +68,13 @@ The background agent should execute these steps:
      ```bash
      cmux workspace-group add --group <group-ref> --workspace workspace:N
      ```
-   - If no such group exists yet, create one seeded with just this workspace:
+   - If no such group exists yet, create an **anchor-only** group (no `--from`), then add the new workspace to it:
      ```bash
-     cmux workspace-group create --name "CVE fixes" --from workspace:N
+     cmux workspace-group create --name "CVE fixes"
+     cmux workspace-group add --group <group-ref> --workspace workspace:N
      ```
+
+   **Never make a stream's workspace the group's anchor.** The anchor IS the group header in the sidebar, so a stream that is the anchor loses its own title/color/sidebar row. Never use `--from workspace:N` on create, and never `set-anchor` to a stream workspace. A stream workspace must always be a regular member of the group, with its own name and color. After adding, verify with `cmux workspace-group list --json` that `anchor_workspace_ref` is not the stream's workspace.
 
    **All other streams: join an existing group if one fits.** Run `cmux workspace-group list --json` (groups get created over time, so re-check every time — don't assume none exist). If a group's name matches the stream's effort (e.g. an "API Gateway" group for a `combined-openapi` / gateway task), add the new workspace to it with `cmux workspace-group add`. Only add when the fit is clear; don't create new groups for non-CVE streams, and don't force a stream into an unrelated group.
 
